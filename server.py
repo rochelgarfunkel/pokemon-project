@@ -2,10 +2,9 @@ import pymysql, json;
 
 from flask import Flask, Response, request 
 import requests;
-from insert import add_pokemon, add_types, is_existent, add_pokemon_owner;
-from delete import delete_pokemon;
-from ex_2 import find_by_type;
-from ex_4 import find_roster;
+
+from db import pokemon, trainer;
+import external_api;
 
 connection = pymysql.connect(
     host="localhost",
@@ -16,86 +15,70 @@ connection = pymysql.connect(
     cursorclass=pymysql.cursors.DictCursor
 )
 
-if not connection.open:
-    print("error in your connection")
+if connection.open:
+    print("the connection is opened")
 
-app = Flask(__name__)
+app = Flask(__name__, static_url_path = '', static_folder = 'frontend')
 
 @app.route('/')
 def welcome():
     return Response("Welcome to the Pokemon Game!!!!!!!")
 
 
-@app.route('/add_pokemon', methods=['Post'])
+@app.route('/pokemon/add', methods=['Post'])
 def add_new_pokemon():
     data = request.get_json()
     if  not data.get("id") or not data.get("name") or not data.get("height") or not data.get("weight") or not data.get("type"):
         return Response("error in your data", 400)
 
-    if is_existent(data)
+    if pokemon.is_existent(data):
         return Response(f"the pokemon you are trying to add already exists")
 
-    add_pokemon(data)
-    add_types(data)
+    pokemon.add(data)
+    pokemon.add_types(data)
     return Response(f"added '{data['name']}' to pokemons")
 
 
-@app.route('/get_pokemon_by_type/<type>')
+@app.route('/pokemon/find_by_type/<type>')
 def get_pokemon_by_type(type):
-    res = find_by_type(type)
+    res = pokemon.find_by_type(type)
     return json.dumps(res)
    
 
-@app.route('/delete_pokemon', methods=['Delete'])  
+@app.route('/pokemon', methods=['Delete'])  
 def delete_pokemon_owner():
     data = request.get_json()
     owner = data["owner"]
     pokemon = data["pokemon"]
-    delete_pokemon(owner, pokemon)
-        return Response(f"'{owner}'s ownership of '{pokemon}' delete successfuly")
+    pokemon.delete_ownership(owner, pokemon)
+    return Response(f"'{owner}'s ownership of '{pokemon}' delete successfuly")
+ 
     
-@app.route('/get_pokemon_by_trainer/<name>')
+@app.route('/pokemon/get_pokemons/<name>')
 def get_pokemon_by_trainer(name):
-    res = find_roster(name)
+    res = trainer.get_pokemons(name)
     return json.dumps(res)
 
-def get_evolve(pokemon):
-    _url = f"https://pokeapi.co/api/v2/pokemon/{pokemon}"
-    pokemon_data = requests.get(url = _url, verify = False).json() 
-    species_url = pokemon_data["species"]["url"]
-    species_data = requests.get(url = species_url, verify = False).json()
-    resource_url = species_data["evolution_chain"]["url"]
-    resource_data = requests.get(url = resource_url, verify = False).json()["chain"]
 
-    while len(resource_data["evolves_to"]):
-        if resource_data["species"]["name"] == pokemon:
-            return resource_data["evolves_to"][0]["species"]["name"]
-        resource_data = resource_data["evolves_to"][0]
-    return None
+@app.route('/evolve/<owner>/<pokemon_name>', methods=['Put'])
+def evolve(owner, pokemon_name):
+    if not trainer.is_pair(owner, pokemon_name):
+        return Response(f"'{owner}' does not own '{pokemon_name}'")
 
-def get_pokemon_data(pokemon):
-    _url = f"https://pokeapi.co/api/v2/pokemon/{pokemon}"
-    pokemon_data = requests.get(url = _url, verify = False).json()
-    pokemon_dict = {}
-    pokemon_dict['id'] = pokemon_data['id']
-    pokemon_dict['name'] = pokemon
-    pokemon_dict['height'] = pokemon_data['height']
-    pokemon_dict['weight'] = pokemon_data['weight']
-    pokemon_dict['type'] = pokemon_data['types']
-    return pokemon_dict
-
-@app.route('/evolve/<trainer><pokemon>', methods=['Put'])
-def evolve(trainer, pokemon):
-    pokemon_to_evolve = get_evolve(pokemon)
-    delete_pokemon(trainer, pokemon)
+    pokemon_to_evolve = external_api.get_evolve(pokemon_name)
+    trainer.delete_ownership(owner, pokemon_name)
     if pokemon_to_evolve:
-        if not is_existent(pokemon_to_evolve):
-            pokemon_as_dict = get_pokemon_data(pokemon_to_evolve)
-            add_pokemon(pokemon_as_dict)
-        add_pokemon_owner(trainer, pokemon)
+        pokemon_as_dict = external_api.get_pokemon_data(pokemon_to_evolve)
+        if not pokemon.is_existent(pokemon_as_dict):
+            pokemon_as_dict = external_api.get_pokemon_data(pokemon_to_evolve)
+            pokemon.add(pokemon_as_dict)
+            pokemon.add_types(pokemon_as_dict)
+        pokemon_id = pokemon.get_id(pokemon_name)
+        trainer.add_pokemon(owner, pokemon_id)
 
-    return Response(f"evolved '{pokemon}' to '{pokemon_to_evolve}'")
+        return Response(f"evolved {pokemon_name} to {pokemon_to_evolve}")
 
+    return Response(f"{pokemon_name} cannot evolve")
 
 
 if __name__ == '__main__':
