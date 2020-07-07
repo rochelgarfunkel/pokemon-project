@@ -53,7 +53,8 @@ def insert_pokemon_owners():
     for pokemon_data in data:
         for owner in pokemon_data["ownedBy"]:
             if trainer.is_pair(owner['name'], pokemon['id']):
-                return Response(f"{owner['name']} already ownes {pokemon_data['id']}")
+                return Response(f"{owner['name']} already ownes {pokemon_data['id']}", 409)
+
             trainer.add_pokemon(owner['name'], pokemon_data['id'])
 
 
