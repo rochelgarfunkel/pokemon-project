@@ -1,13 +1,8 @@
 import pymysql, json;
-from db import pokemon;
-from db import trainer;
+from DB import pokemon;
+from DB import trainer;
 from flask import Response;
 
-def insert_data():
-    insert_pokemon()
-    insert_owners()
-    insert_pokemon_owners()
-    insert_pokemon_types()
 
 connection = pymysql.connect(
     host="localhost",
@@ -18,14 +13,23 @@ connection = pymysql.connect(
     cursorclass=pymysql.cursors.DictCursor
 )
 
+
 if connection.open:
     print("the connection is opened")
+
 
 def open_file():
     with open("setup/pokemon_data.json") as file:
         return json.load(file)
 
-     
+
+ def insert_data():
+    insert_pokemon()
+    insert_owners()
+    insert_pokemon_owners()
+    insert_pokemon_types()
+
+
 def insert_pokemon():
     data = open_file()
     for pokemon_data in data:

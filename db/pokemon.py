@@ -29,7 +29,7 @@ def is_existent(pokemon):
 def add_types(pokemon):
     for type in set(pokemon['type']):
         with connection.cursor() as cursor:
-            query = f"INSERT into pokemon_types values ({pokemon['id']}, '{pokemon[type]}')"
+            query = f"INSERT into pokemon_types values ({pokemon['id']}, '{type}')"
             cursor.execute(query)
             connection.commit()
 

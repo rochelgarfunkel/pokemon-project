@@ -28,9 +28,4 @@ CREATE TABLE pokemon_types(
     FOREIGN KEY(pokemon_id) REFERENCES pokemon(id)
 );
 
--- DROP TABLE pokemon_owners;
--- DROP TABLE pokemon;
--- DROP TABLE owners;
--- DROP DATABASE pokemon;
--- CREATE DATABASE pokemon;
 
