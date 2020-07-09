@@ -2,7 +2,7 @@ from flask import Flask, Response, request, redirect, render_template
 import json
 import requests
 from DB import trainer, pokemon
-import external_api;
+from external_api import pokeapi, poke_pics;
 
 
 app = Flask(__name__, static_url_path='', static_folder='frontend', template_folder='frontend')
@@ -66,10 +66,10 @@ def evolve():
     if not trainer.is_pair(owner, pokemon_name):
         return Response(f"'{owner}' does not own '{pokemon_name}'"), 400
     
-    pokemon_to_evolve = external_api.get_evolve(pokemon_name)
+    pokemon_to_evolve = pokeapi.get_evolve(pokemon_name)
     trainer.delete_ownership(owner, pokemon_name)
     if pokemon_to_evolve:
-        pokemon_as_dict = external_api.get_pokemon_data(pokemon_to_evolve)
+        pokemon_as_dict = pokeapi.get_pokemon_data(pokemon_to_evolve)
         if not pokemon.is_existent(pokemon_as_dict):
             pokemon.add(pokemon_as_dict)
             pokemon.add_types(pokemon_as_dict)
@@ -85,19 +85,15 @@ def evolve():
 def get_picture():
     pokemon_name = request.args.get('pokemon')
     pokemon_id = pokemon.get_id(pokemon_name)
-    return render_template("/view_pok.html", name= pokemon_name, the_url= f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{pokemon_id}.png")
+    return poke_pics.get_picture(pokemon_name)
 
 
 @app.route('/evolve/pic')
 def evolve_pic():
     pokemon_name = request.args.get('pokemon')
-    name = external_api.get_evolve(pokemon_name)
+    new_name = pokeapi.get_evolve(pokemon_name)
+    return poke_pics.evolve_pic(pokemon_name, new_name)
  
-    if name:
-        return render_template("/evolve_render.html", name= pokemon_name, old_url= f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{pokemon.get_id(pokemon_name)}.png", new_url= f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{pokemon.get_id(name)}.png")
-    else :
-        return render_template("/evolve_render.html", name= pokemon_name, old_url= f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{pokemon.get_id(pokemon_name)}.png", new_url= f"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/{pokemon.get_id(pokemon_name)}.png")
-
 
 if __name__ == "__main__":
     app.run(port=3001)
